@@ -64,7 +64,7 @@ chmod +x pdf-renamer
 ### Option 2: Install from Source with pip
 
 ```bash
-pip install git+https://github.com/yourusername/pdf-renames.git
+pip install git+https://github.com/wongws11/pdf-renames.git
 pdf-renamer /path/to/pdfs
 ```
 
