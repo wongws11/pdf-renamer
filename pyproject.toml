@@ -45,13 +45,13 @@ Repository = "https://github.com/wongws11/pdf-renamer.git"
 "Bug Tracker" = "https://github.com/wongws11/pdf-renamer/issues"
 
 [project.scripts]
-pdf-renamer = "src.pdf_renamer.cli:main"
+pdf-renamer = "pdf_renamer.cli:main"
 
 [tool.setuptools]
-packages = ["src.pdf_renamer"]
+packages = ["pdf_renamer"]
 
 [tool.setuptools.package-dir]
-"" = "."
+"" = "src"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
