@@ -6,3 +6,5 @@ __pycache__/
 pdf_cache.db
 pdf_cache.db-shm
 pdf_cache.db-wal
+build/
+dist/
