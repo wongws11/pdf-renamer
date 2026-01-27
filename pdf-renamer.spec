@@ -2,7 +2,7 @@
 
 a = Analysis(
     ['src/pdf_renamer/__main__.py'],
-    pathex=[],
+    pathex=['src'],
     binaries=[],
     datas=[],
     hiddenimports=['pdf2image', 'requests', 'PIL', 'sqlite3', 'pdf_renamer.cli', 'pdf_renamer.pdf_utils'],
