@@ -29,6 +29,47 @@ Although Qwen3-VL is available and known to be more advanced, Qwen2.5-VL provide
 
 ## Installation
 
+### Option 1: Download Pre-Built Binary (Easiest)
+
+Download standalone executable from [GitHub Releases](https://github.com/wongws11/pdf-renames/releases):
+
+**macOS (Intel):**
+```bash
+tar -xzf pdf-renamer-macos-x86_64.tar.gz
+chmod +x pdf-renamer
+./pdf-renamer /path/to/pdfs
+```
+
+**macOS (Apple Silicon):**
+```bash
+tar -xzf pdf-renamer-macos-arm64.tar.gz
+chmod +x pdf-renamer
+./pdf-renamer /path/to/pdfs
+```
+
+**Windows:**
+```bash
+# Extract pdf-renamer-windows.zip
+cd pdf-renamer
+./pdf-renamer.exe C:\path\to\pdfs
+```
+
+**Linux:**
+```bash
+tar -xzf pdf-renamer-linux.tar.gz
+chmod +x pdf-renamer
+./pdf-renamer /path/to/pdfs
+```
+
+### Option 2: Install from Source with pip
+
+```bash
+pip install git+https://github.com/yourusername/pdf-renames.git
+pdf-renamer /path/to/pdfs
+```
+
+### Option 3: Local Development
+
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
