@@ -48,10 +48,11 @@ chmod +x pdf-renamer
 ```
 
 **Windows:**
-```bash
-# Extract pdf-renamer-windows.zip
-cd pdf-renamer
-./pdf-renamer.exe C:\path\to\pdfs
+```powershell
+# Extract pdf-renamer-windows.zip into a folder
+Expand-Archive .\pdf-renamer-windows.zip -DestinationPath .\pdf-renamer-windows
+cd .\pdf-renamer-windows
+.\pdf-renamer.exe "C:\path\to\pdfs"
 ```
 
 **Linux:**
