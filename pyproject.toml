@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-renamer"
+version = "1.0.0"
+description = "AI-powered PDF document classification and automatic renaming using vision-language models"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Wing Wong", email = "wongwsme@gmail.com" }]
+keywords = [
+	"pdf",
+	"document-management",
+	"automation",
+	"ai",
+	"vision-model",
+	"ollama",
+	"document-classification",
+]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Intended Audience :: End Users/Desktop",
+	"Intended Audience :: Developers",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
+	"Topic :: Office/Business",
+	"Topic :: Utilities",
+	"Operating System :: MacOS",
+	"Operating System :: POSIX :: Linux",
+	"Operating System :: Microsoft :: Windows",
+]
+requires-python = ">=3.13"
+dependencies = ["requests>=2.31.0", "Pillow>=10.0.0", "pdf2image>=1.16.3"]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/pdf-renames"
+Documentation = "https://github.com/yourusername/pdf-renames#readme"
+Repository = "https://github.com/yourusername/pdf-renames.git"
+"Bug Tracker" = "https://github.com/yourusername/pdf-renames/issues"
+
+[project.scripts]
+pdf-renamer = "src.pdf_renamer.cli:main"
+
+[tool.setuptools]
+packages = ["src.pdf_renamer"]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pylint]
+max-line-length = 88

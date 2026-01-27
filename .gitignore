@@ -1,0 +1,8 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.vscode/
+pdf_cache.db
+pdf_cache.db-shm
+pdf_cache.db-wal
