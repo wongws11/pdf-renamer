@@ -45,21 +45,23 @@ jobs:
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'release'
         with:
           files: pdf-renamer-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
-    runs-on: macos-latest
     strategy:
       matrix:
         include:
           - python-version: "3.13"
             arch: "x86_64"
+            runner: "macos-13"
           - python-version: "3.13"
             arch: "arm64"
+            runner: "macos-14"
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       
@@ -76,22 +78,19 @@ jobs:
           pip install pyinstaller
       
       - name: Build executable (${{ matrix.arch }})
-        env:
-          ARCHFLAGS: "-arch ${{ matrix.arch == 'arm64' && 'arm64' || 'x86_64' }}"
         run: |
           pyinstaller pdf-renamer.spec
-          mv dist/pdf-renamer dist/pdf-renamer-${{ matrix.arch }}
       
       - name: Create tarball
         run: |
-          tar -czf pdf-renamer-macos-${{ matrix.arch }}.tar.gz -C dist pdf-renamer-${{ matrix.arch }}
+          tar -czf pdf-renamer-macos-${{ matrix.arch }}.tar.gz -C dist pdf-renamer
       
       - name: Cleanup dist folder
         run: rm -rf dist
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'release'
         with:
           files: pdf-renamer-macos-${{ matrix.arch }}.tar.gz
         env:
@@ -135,7 +134,7 @@ jobs:
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
-        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'release'
         with:
           files: pdf-renamer-linux.tar.gz
         env:
