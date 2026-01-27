@@ -34,20 +34,25 @@ Although Qwen3-VL is available and known to be more advanced, Qwen2.5-VL provide
 Download standalone executable from [GitHub Releases](https://github.com/wongws11/pdf-renamer/releases):
 
 **macOS (Intel):**
+
 ```bash
 tar -xzf pdf-renamer-macos-x86_64.tar.gz
 chmod +x pdf-renamer
+xattr -cr pdf-renamer # Remove quarantine attribute
 ./pdf-renamer /path/to/pdfs
 ```
 
 **macOS (Apple Silicon):**
+
 ```bash
 tar -xzf pdf-renamer-macos-arm64.tar.gz
 chmod +x pdf-renamer
+xattr -cr pdf-renamer # Remove quarantine attribute
 ./pdf-renamer /path/to/pdfs
 ```
 
 **Windows:**
+
 ```powershell
 # Extract pdf-renamer-windows.zip into a folder
 Expand-Archive .\pdf-renamer-windows.zip -DestinationPath .\pdf-renamer-windows
@@ -56,6 +61,7 @@ cd .\pdf-renamer-windows
 ```
 
 **Linux:**
+
 ```bash
 tar -xzf pdf-renamer-linux.tar.gz
 chmod +x pdf-renamer
