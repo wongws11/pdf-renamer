@@ -117,7 +117,11 @@ class PDFCache:
             self.pool.return_connection(conn)
 
     def get(self, checksum: str) -> Optional[Tuple[Optional[str], str, Optional[str]]]:
-        """Get cached analysis result"""
+        """Get cached analysis result by content checksum
+
+        Returns cached result only if checksum matches, ensuring different
+        files with the same name won't incorrectly reuse old cache entries.
+        """
         conn = self.pool.get_connection()
         try:
             cursor = conn.execute(
@@ -126,6 +130,27 @@ class PDFCache:
             )
             row = cursor.fetchone()
             return row if row else None
+        finally:
+            self.pool.return_connection(conn)
+
+    def validate_cache_entry(self, file_path: Path, checksum: str) -> bool:
+        """Validate that a file's current checksum matches its cache entry
+
+        Ensures that if a file with the same name was replaced with different
+        content, it won't incorrectly use the old cache. This is a safety check.
+        """
+        conn = self.pool.get_connection()
+        try:
+            cursor = conn.execute(
+                "SELECT checksum FROM pdf_analysis WHERE filename = ?",
+                (file_path.name,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return True  # No cache entry, not a validation failure
+
+            cached_checksum = row[0]
+            return cached_checksum == checksum
         finally:
             self.pool.return_connection(conn)
 
@@ -359,21 +384,40 @@ class FilenameGenerator:
         doc_id: Optional[str],
         counter: int = 0,
         file_ext: str = ".pdf",
+        receipt: bool = False,
     ) -> str:
-        """Create sanitized filename in format: Description_ID.pdf or YYYY-MM-DD_Description_ID.pdf if date found"""
+        """Create sanitized filename.
+
+        Formats:
+        - Normal mode: Description_ID.pdf or YYYY-MM-DD_Description_ID.pdf if date found
+        - Receipt mode: YYYY-MM-DD_storename_description_id.pdf (date_storename_description_id)
+
+        If description or doc_id is missing, or marked as NONE, they are omitted.
+        """
         parts = []
 
         # Add date only if available
         if date:
             parts.append(date)
 
-        # Add description (replace spaces with underscores)
-        description_clean = description.replace(" ", "_")
-        parts.append(description_clean)
+        # In receipt mode, description is treated as storename and doc_id as description
+        if receipt and receipt != "NONE":
+            # description becomes storename
+            storename_clean = description.replace(" ", "_")
+            parts.append(storename_clean)
 
-        # Add ID only if it exists
-        if doc_id:
-            parts.append(doc_id)
+            # doc_id becomes description (if it exists)
+            if doc_id and doc_id != "NONE":
+                parts.append(doc_id)
+        else:
+            # Normal mode
+            # Add description (replace spaces with underscores)
+            description_clean = description.replace(" ", "_")
+            parts.append(description_clean)
+
+            # Add ID only if it exists
+            if doc_id and doc_id != "NONE":
+                parts.append(doc_id)
 
         # Add counter if needed
         if counter > 0:
@@ -461,7 +505,11 @@ class LLMAnalyzer:
             return False
 
     def analyze_document(
-        self, image_base64: str, filename: str = "", model: str = ""
+        self,
+        image_base64: str,
+        filename: str = "",
+        model: str = "",
+        receipt: bool = False,
     ) -> str:
         """Send image to Ollama for analysis with optimized prompt"""
         if not model:
@@ -470,7 +518,38 @@ class LLMAnalyzer:
                 raise Exception("No models available in Ollama")
             model = model_result
 
-        prompt = f"""Analyze this document and provide:
+        if receipt:
+            # Prompt for receipt mode
+            prompt = f"""Analyze this receipt or invoice and provide:
+
+1. Date (YYYY-MM-DD format, or NONE if not visible)
+2. Store/Merchant name (the business that issued this receipt - be concise!)
+3. Item description or transaction type (primary item purchased or service - or NONE if not visible)
+
+Original filename: {filename}
+
+Consider original filename might contain hints. 
+If you consider original filename useful, 
+you may use it to infer missing details after careful consideration only if the receipt is unclear.
+
+Format your response EXACTLY as:
+Date: [date]
+Description: [store/merchant name] [item description or NONE]
+ID: [document ID or NONE]
+
+Examples:
+Date: 2024-07-12
+Description: Walmart Grocery
+ID: 1234567890
+
+Date: 2023-05-15
+Description: Shell Gas Station Fuel Purchase
+ID: NONE
+
+Only extract what you actually see in the receipt."""
+        else:
+            # Original prompt for normal mode
+            prompt = f"""Analyze this document and provide:
 
 1. Date (YYYY-MM-DD format, or NONE if not visible)
 2. Brief description (2-4 words maximum - be concise!)

@@ -14,5 +14,5 @@ if __name__ == "__main__":
     if str(current_dir) not in sys.path:
         sys.path.insert(0, str(current_dir))
     
-    from pdf_renamer.cli import main
+    from pdf_renamer.main import main
     main()
