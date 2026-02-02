@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/downloads/)
 
-[![](./docs/hero_image.png)]()
+[![](./docs/hero_image.webp)]()
 
 Automatically rename PDFs and images using a vision-language model (Qwen2.5-VL) running locally via Ollama. Perfect for organizing document collections without cloud dependencies.
 
