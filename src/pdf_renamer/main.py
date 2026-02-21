@@ -27,27 +27,13 @@ def show_cache_stats(cache_path: Path):
     sys.exit(0)
 
 
-def check_ollama_connection(renamer: PDFRenamer, server_url: str):
-    """Check Ollama connection and get model info"""
-    print("Checking Ollama connection...")
+def check_model_connection(renamer: PDFRenamer):
+    """Check built-in model is loaded"""
     if not renamer.check_server():
-        print("\n❌ ERROR: Cannot connect to Ollama!")
-        print(f"   Make sure it's running at {server_url}")
-        print("\nStart with:")
-        print("  ollama serve")
+        print("\n❌ ERROR: Model failed to load!")
         sys.exit(1)
 
-    print("✓ Connected to Ollama")
-
-    # Get first available model
-    print("Detecting available model...")
-    model_name = renamer.llm_analyzer.get_first_model()
-    if not model_name:
-        print("\n❌ ERROR: No models found in Ollama!")
-        print("Pull a model first with: ollama pull qwen2-vl")
-        sys.exit(1)
-
-    print(f"✓ Using model: {model_name}\n")
+    print("✓ Model loaded successfully")
 
 
 def process_single_file(renamer: PDFRenamer, args) -> dict:
@@ -102,7 +88,6 @@ def main():
 
     # Initialize renamer
     renamer = PDFRenamer(
-        server_url=args.server,
         verbose=args.verbose,
         use_cache=not args.no_cache,
         cache_path=args.cache_path,
@@ -110,8 +95,8 @@ def main():
         receipt=args.receipt,
     )
 
-    # Check Ollama connection
-    check_ollama_connection(renamer, args.server)
+    # Check model is loaded
+    check_model_connection(renamer)
 
     # Process PDFs
     if args.input_path.is_file():

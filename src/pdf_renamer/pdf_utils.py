@@ -12,11 +12,11 @@ from pathlib import Path
 from typing import Tuple, Optional, Dict, List
 import threading
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from pdf2image import convert_from_path
 from PIL import Image
+from huggingface_hub import hf_hub_download
+from llama_cpp import Llama
+from llama_cpp.llama_chat_format import Qwen25VLChatHandler
 
 
 # Thread-safe connection pool for database
@@ -431,78 +431,42 @@ class FilenameGenerator:
 
         return filename
 
-
 class LLMAnalyzer:
-    """Utility class for LLM analysis via Ollama with connection pooling"""
+    """Utility class for LLM analysis via HuggingFace and llama.cpp"""
 
-    def __init__(self, server_url: str = "http://127.0.0.1:11434"):
-        self.server_url = server_url
-        self.session = requests.Session()
-        # Configure connection pooling
-        adapter = HTTPAdapter(
-            pool_connections=10, pool_maxsize=10, max_retries=Retry(total=2)
-        )
-        self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
+    def __init__(self, server_url: str = ""):
+        # server_url is kept for API compatibility but not used
+        self.llm = None
+        self.repo_id = "unsloth/Qwen2.5-VL-3B-Instruct-GGUF"
+        self.model_filename = "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf"
+        self.mmproj_filename = "mmproj-F16.gguf"
+        
+        # Download and load the model on initialization
+        self._initialize_model()
+
+    def _initialize_model(self):
+        """Download (if needed) and initialize the model"""
+        print(f"Loading vision model (may download on first run)...")
+        try:
+            model_path = hf_hub_download(repo_id=self.repo_id, filename=self.model_filename)
+            mmproj_path = hf_hub_download(repo_id=self.repo_id, filename=self.mmproj_filename)
+            
+            chat_handler = Qwen25VLChatHandler(clip_model_path=mmproj_path)
+            
+            # Using -1 for Metal/GPU support automatically if available
+            self.llm = Llama(
+                model_path=model_path,
+                chat_handler=chat_handler,
+                n_ctx=4096,
+                n_gpu_layers=-1,
+                verbose=False
+            )
+        except Exception as e:
+            raise Exception(f"Failed to initialize model: {str(e)}")
 
     def check_server(self) -> bool:
-        """Verify Ollama server is running"""
-        try:
-            response = self.session.get(f"{self.server_url}/api/tags", timeout=5)
-            return response.status_code == 200
-        except requests.exceptions.RequestException:
-            return False
-
-    def get_first_model(self) -> Optional[str]:
-        """Get the name of the first available model"""
-        try:
-            response = self.session.get(f"{self.server_url}/api/tags", timeout=5)
-            if response.status_code == 200:
-                models = response.json().get("models", [])
-                if models:
-                    return models[0].get("name", "")
-            return None
-        except Exception:
-            return None
-
-    def pull_model(self, model_name: str = "qwen2.5-vl") -> bool:
-        """Pull model from Ollama if not already present"""
-        try:
-            # Check if model exists
-            response = self.session.get(f"{self.server_url}/api/tags", timeout=5)
-            if response.status_code == 200:
-                models = response.json().get("models", [])
-                model_names = [m.get("name", "").split(":")[0] for m in models]
-                if model_name in model_names:
-                    return True
-
-            # Model not found, try to pull it
-            print(f"Pulling {model_name} model from Ollama...")
-            result = subprocess.run(
-                ["ollama", "pull", model_name],
-                capture_output=True,
-                text=True,
-                timeout=600,
-            )
-
-            if result.returncode == 0:
-                print(f"✓ Successfully pulled {model_name}")
-                return True
-            else:
-                print(f"✗ Failed to pull {model_name}: {result.stderr}")
-                return False
-
-        except subprocess.TimeoutExpired:
-            print(f"✗ Timeout while pulling {model_name}")
-            return False
-        except FileNotFoundError:
-            print(
-                f"✗ ollama command not found. Make sure Ollama is installed and in PATH"
-            )
-            return False
-        except Exception as e:
-            print(f"✗ Error pulling model: {str(e)}")
-            return False
+        """Verify model is loaded"""
+        return self.llm is not None
 
     def analyze_document(
         self,
@@ -511,12 +475,9 @@ class LLMAnalyzer:
         model: str = "",
         receipt: bool = False,
     ) -> str:
-        """Send image to Ollama for analysis with optimized prompt"""
-        if not model:
-            model_result = self.get_first_model()
-            if not model_result:
-                raise Exception("No models available in Ollama")
-            model = model_result
+        """Send image to the built-in model for analysis"""
+        if not self.llm:
+            raise Exception("Model is not initialized")
 
         if receipt:
             # Prompt for receipt mode
@@ -577,33 +538,32 @@ ID: POL-2023-5678
 
 Only extract what you actually see in the document."""
 
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt, "images": [image_base64]}],
-            "stream": False,
-            "temperature": 0.1,
-        }
-
         try:
-            response = self.session.post(
-                f"{self.server_url}/api/chat",
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=120,
+            response = self.llm.create_chat_completion(
+                max_tokens=256,
+                temperature=0.1,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
+                            {"type": "text", "text": prompt}
+                        ]
+                    }
+                ]
             )
 
-            if response.status_code == 200:
-                result = response.json()
-                content = result.get("message", {}).get("content", "")
+            if "choices" in response and len(response["choices"]) > 0:
+                content = response["choices"][0]["message"].get("content", "")
                 return content
             else:
-                raise Exception(
-                    f"Server returned status {response.status_code}: {response.text}"
-                )
+                raise Exception("Empty response from model")
 
         except Exception as e:
-            raise Exception(f"Ollama request failed: {str(e)}")
+            raise Exception(f"Model request failed: {str(e)}")
 
     def close(self):
-        """Close session"""
-        self.session.close()
+        """Cleanup resources"""
+        if self.llm:
+            # Let garbage collection handle it or any explicit close if needed
+            self.llm = None
