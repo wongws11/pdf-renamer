@@ -40,7 +40,7 @@ class PDFRenamer:
         self.stats = ProcessingStats()
 
         # Initialize utilities
-        self.llm_analyzer = LLMAnalyzer()
+        self.llm_analyzer = LLMAnalyzer(verbose=verbose)
         self.pdf_converter = PDFConverter()
         self.file_utils = FileUtils()
         self.response_parser = ResponseParser()

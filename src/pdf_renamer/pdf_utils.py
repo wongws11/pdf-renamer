@@ -431,12 +431,15 @@ class FilenameGenerator:
 
         return filename
 
+from .log_silencer import SuppressLlamaLogs
+
 class LLMAnalyzer:
     """Utility class for LLM analysis via HuggingFace and llama.cpp"""
 
-    def __init__(self, server_url: str = ""):
+    def __init__(self, server_url: str = "", verbose: bool = False):
         # server_url is kept for API compatibility but not used
         self.llm = None
+        self.verbose = verbose
         self.repo_id = "unsloth/Qwen2.5-VL-3B-Instruct-GGUF"
         self.model_filename = "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf"
         self.mmproj_filename = "mmproj-F16.gguf"
@@ -446,21 +449,23 @@ class LLMAnalyzer:
 
     def _initialize_model(self):
         """Download (if needed) and initialize the model"""
-        print(f"Loading vision model (may download on first run)...")
+        if self.verbose:
+            print(f"Loading vision model (may download on first run)...")
         try:
-            model_path = hf_hub_download(repo_id=self.repo_id, filename=self.model_filename)
-            mmproj_path = hf_hub_download(repo_id=self.repo_id, filename=self.mmproj_filename)
-            
-            chat_handler = Qwen25VLChatHandler(clip_model_path=mmproj_path)
-            
-            # Using -1 for Metal/GPU support automatically if available
-            self.llm = Llama(
-                model_path=model_path,
-                chat_handler=chat_handler,
-                n_ctx=4096,
-                n_gpu_layers=-1,
-                verbose=False
-            )
+            with SuppressLlamaLogs(verbose=self.verbose):
+                model_path = hf_hub_download(repo_id=self.repo_id, filename=self.model_filename)
+                mmproj_path = hf_hub_download(repo_id=self.repo_id, filename=self.mmproj_filename)
+                
+                chat_handler = Qwen25VLChatHandler(clip_model_path=mmproj_path)
+                
+                # Using -1 for Metal/GPU support automatically if available
+                self.llm = Llama(
+                    model_path=model_path,
+                    chat_handler=chat_handler,
+                    n_ctx=4096,
+                    n_gpu_layers=-1,
+                    verbose=self.verbose
+                )
         except Exception as e:
             raise Exception(f"Failed to initialize model: {str(e)}")
 
@@ -539,19 +544,20 @@ ID: POL-2023-5678
 Only extract what you actually see in the document."""
 
         try:
-            response = self.llm.create_chat_completion(
-                max_tokens=256,
-                temperature=0.1,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
-                            {"type": "text", "text": prompt}
-                        ]
-                    }
-                ]
-            )
+            with SuppressLlamaLogs(verbose=self.verbose):
+                response = self.llm.create_chat_completion(
+                    max_tokens=256,
+                    temperature=0.1,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
+                                {"type": "text", "text": prompt}
+                            ]
+                        }
+                    ]
+                )
 
             if "choices" in response and len(response["choices"]) > 0:
                 content = response["choices"][0]["message"].get("content", "")

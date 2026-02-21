@@ -27,13 +27,14 @@ def show_cache_stats(cache_path: Path):
     sys.exit(0)
 
 
-def check_model_connection(renamer: PDFRenamer):
+def check_model_connection(renamer: PDFRenamer, verbose: bool):
     """Check built-in model is loaded"""
     if not renamer.check_server():
         print("\n❌ ERROR: Model failed to load!")
         sys.exit(1)
 
-    print("✓ Model loaded successfully")
+    if verbose:
+        print("✓ Model loaded successfully")
 
 
 def process_single_file(renamer: PDFRenamer, args) -> dict:
@@ -96,7 +97,7 @@ def main():
     )
 
     # Check model is loaded
-    check_model_connection(renamer)
+    check_model_connection(renamer, args.verbose)
 
     # Process PDFs
     if args.input_path.is_file():
