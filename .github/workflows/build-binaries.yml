@@ -62,6 +62,8 @@ jobs:
             arch: "arm64"
             runner: "macos-latest"
     runs-on: ${{ matrix.runner }}
+    env:
+      CMAKE_ARGS: ${{ matrix.arch == 'arm64' && '-DGGML_NO_I8MM=ON' || '' }}
     steps:
       - uses: actions/checkout@v4
       
