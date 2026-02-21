@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from pdf_renamer.renamer import PDFRenamer
 from unittest.mock import patch

@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 from pdf_renamer.main import main
 from unittest.mock import patch
 import sys

@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 from .config import parse_args
-from .logger import Logger
 from .pdf_utils import PDFCache
 from .renamer import PDFRenamer
 

@@ -7,7 +7,6 @@ import hashlib
 import io
 import re
 import sqlite3
-import subprocess
 from pathlib import Path
 from typing import Tuple, Optional, Dict, List
 import threading
@@ -450,7 +449,7 @@ class LLMAnalyzer:
     def _initialize_model(self):
         """Download (if needed) and initialize the model"""
         if self.verbose:
-            print(f"Loading vision model (may download on first run)...")
+            print("Loading vision model (may download on first run)...")
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
                 model_path = hf_hub_download(repo_id=self.repo_id, filename=self.model_filename)

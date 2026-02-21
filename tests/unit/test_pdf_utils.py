@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from pdf_renamer.pdf_utils import FilenameGenerator, ResponseParser, FileUtils
 
 def test_filename_generator_normal():

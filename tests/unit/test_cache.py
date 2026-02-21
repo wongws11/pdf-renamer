@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from pdf_renamer.pdf_utils import PDFCache
 
 def test_cache_set_and_get(tmp_path):
