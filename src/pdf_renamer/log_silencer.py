@@ -1,13 +1,14 @@
 import os
 import sys
+from typing import Optional
 
 class SuppressLlamaLogs:
     """Context manager to suppress stdout and stderr at the C-level (file descriptor level)"""
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.fd_null = None
-        self.old_stderr = None
-        self.old_stdout = None
+        self.fd_null: Optional[int] = None
+        self.old_stderr: Optional[int] = None
+        self.old_stdout: Optional[int] = None
 
     def __enter__(self):
         if self.verbose:
@@ -34,10 +35,11 @@ class SuppressLlamaLogs:
         sys.stdout.flush()
         
         # Restore old descriptors
-        os.dup2(self.old_stderr, sys.stderr.fileno())
-        os.dup2(self.old_stdout, sys.stdout.fileno())
-        
-        # Close the duplicated descriptors
-        os.close(self.fd_null)
-        os.close(self.old_stderr)
-        os.close(self.old_stdout)
+        if self.old_stderr is not None and self.old_stdout is not None and self.fd_null is not None:
+            os.dup2(self.old_stderr, sys.stderr.fileno())
+            os.dup2(self.old_stdout, sys.stdout.fileno())
+            
+            # Close the duplicated descriptors
+            os.close(self.fd_null)
+            os.close(self.old_stderr)
+            os.close(self.old_stdout)

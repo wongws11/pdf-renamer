@@ -559,8 +559,10 @@ Only extract what you actually see in the document."""
                     ]
                 )
 
-            if "choices" in response and len(response["choices"]) > 0:
+            if isinstance(response, dict) and "choices" in response and len(response["choices"]) > 0:
                 content = response["choices"][0]["message"].get("content", "")
+                if content is None:
+                    return ""
                 return content
             else:
                 raise Exception("Empty response from model")
