@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .config import parse_args
+from .log_silencer import configure_logging
 from .pdf_utils import PDFCache
 from .renamer import PDFRenamer
 
@@ -81,6 +82,9 @@ def save_results(results: dict, output_file: Path):
 def main():
     """Main entry point"""
     args = parse_args()
+
+    # Configure logging early, before any model initialization
+    configure_logging(verbose=args.verbose)
 
     # Show cache stats if requested
     if args.cache_stats:
