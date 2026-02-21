@@ -1,0 +1,2 @@
+[console_scripts]
+pdf-renamer = pdf_renamer.cli:main

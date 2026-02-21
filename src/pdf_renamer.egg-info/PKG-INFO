@@ -1,3 +1,41 @@
+Metadata-Version: 2.4
+Name: pdf-renamer
+Version: 1.2.0
+Summary: AI-powered PDF document classification and automatic renaming using vision-language models
+Author-email: Wing Wong <wongwsme@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/wongws11/pdf-renamer
+Project-URL: Documentation, https://github.com/wongws11/pdf-renamer#readme
+Project-URL: Repository, https://github.com/wongws11/pdf-renamer.git
+Project-URL: Bug Tracker, https://github.com/wongws11/pdf-renamer/issues
+Keywords: pdf,document-management,automation,ai,vision-model,document-classification
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Office/Business
+Classifier: Topic :: Utilities
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: Microsoft :: Windows
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: pdf2image>=1.16.3
+Requires-Dist: huggingface-hub>=0.23.0
+Requires-Dist: llama-cpp-python>=0.3.16
+Provides-Extra: test
+Requires-Dist: pytest>=7.0.0; extra == "test"
+Requires-Dist: pytest-mock>=3.10.0; extra == "test"
+Dynamic: license-file
+
 # PDF Renamer 📄✨
 
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)

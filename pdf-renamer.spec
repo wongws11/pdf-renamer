@@ -5,7 +5,7 @@ a = Analysis(
     pathex=['src', '.'],
     binaries=[],
     datas=[],
-    hiddenimports=['pdf2image', 'requests', 'PIL', 'sqlite3', 'pdf_renamer.cli', 'pdf_renamer.pdf_utils'],
+    hiddenimports=['pdf2image', 'huggingface_hub', 'llama_cpp', 'PIL', 'sqlite3', 'pdf_renamer.cli', 'pdf_renamer.pdf_utils', 'pdf_renamer.log_silencer'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -34,5 +34,4 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    onefile=True,
 )

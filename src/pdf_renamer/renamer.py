@@ -23,14 +23,12 @@ class PDFRenamer:
 
     def __init__(
         self,
-        server_url: str = "http://127.0.0.1:8080",
         verbose: bool = False,
         use_cache: bool = True,
         cache_path: Optional[Path] = None,
         max_workers: int = 4,
         receipt: bool = False,
     ):
-        self.server_url = server_url
         self.verbose = verbose
         self.max_workers = max_workers
         self.receipt = receipt
@@ -42,7 +40,7 @@ class PDFRenamer:
         self.stats = ProcessingStats()
 
         # Initialize utilities
-        self.llm_analyzer = LLMAnalyzer(server_url)
+        self.llm_analyzer = LLMAnalyzer(verbose=verbose)
         self.pdf_converter = PDFConverter()
         self.file_utils = FileUtils()
         self.response_parser = ResponseParser()
@@ -54,7 +52,7 @@ class PDFRenamer:
         self.cache = PDFCache(cache_path or Path("pdf_cache.db"))
 
     def check_server(self) -> bool:
-        """Verify Ollama is running"""
+        """Verify model is loaded"""
         return self.llm_analyzer.check_server()
 
     def process_pdf(

@@ -11,10 +11,6 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Automatically rename PDFs using vision model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Before running, start Ollama:
-  ollama serve
-        """,
     )
 
     parser.add_argument(
@@ -46,13 +42,6 @@ Before running, start Ollama:
         "--receipt",
         action="store_true",
         help="Receipt mode: use date_storename_description_id format",
-    )
-
-    parser.add_argument(
-        "-s",
-        "--server",
-        default="http://127.0.0.1:11434",
-        help="Ollama server URL (default: http://127.0.0.1:11434)",
     )
 
     parser.add_argument(

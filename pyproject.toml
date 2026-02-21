@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-renamer"
-version = "1.0.1"
+version = "1.2.0"
 description = "AI-powered PDF document classification and automatic renaming using vision-language models"
 readme = "README.md"
 license = { text = "MIT" }
@@ -15,7 +15,6 @@ keywords = [
 	"automation",
 	"ai",
 	"vision-model",
-	"ollama",
 	"document-classification",
 ]
 classifiers = [
@@ -36,7 +35,13 @@ classifiers = [
 	"Operating System :: Microsoft :: Windows",
 ]
 requires-python = ">=3.13"
-dependencies = ["requests>=2.31.0", "Pillow>=10.0.0", "pdf2image>=1.16.3"]
+dependencies = ["Pillow>=10.0.0", "pdf2image>=1.16.3", "huggingface-hub>=0.23.0", "llama-cpp-python>=0.3.16"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/wongws11/pdf-renamer"
