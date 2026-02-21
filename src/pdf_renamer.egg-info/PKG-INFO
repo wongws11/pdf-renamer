@@ -27,7 +27,6 @@ Classifier: Operating System :: Microsoft :: Windows
 Requires-Python: >=3.13
 Description-Content-Type: text/markdown
 License-File: LICENSE
-Requires-Dist: requests>=2.31.0
 Requires-Dist: Pillow>=10.0.0
 Requires-Dist: pdf2image>=1.16.3
 Requires-Dist: huggingface-hub>=0.23.0
