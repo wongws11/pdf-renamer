@@ -64,13 +64,13 @@ def _restore_fds():
 
 def configure_logging(verbose: bool = False):
     """
-    Configures global logging for llama.cpp and CLIP.
+    Configures global logging for llama.cpp.
     
-    If verbose is False:
-    1. Installs a no-op callback to silence llama.cpp logs (thread-safe)
-    2. Redirects stdout/stderr FDs to /dev/null to suppress CLIP logs
+    If verbose is False, installs a no-op callback to silence llama.cpp logs.
+    This is thread-safe and affects the global process state.
     
-    This affects the global process state.
+    Note: CLIP logs are suppressed via context manager (SuppressLlamaLogs)
+    during model initialization and inference only.
     """
     if verbose:
         return
@@ -98,28 +98,44 @@ def configure_logging(verbose: bool = False):
         except Exception:
             # Fallback if something goes wrong with ctypes
             pass
-    
-    # Redirect FDs for CLIP/other C libraries
-    _redirect_fds_to_devnull()
 
 
 class SuppressLlamaLogs:
     """
-    Context manager to suppress llama.cpp and CLIP logs.
-    Handles both callback-based suppression (llama.cpp) and FD redirection (CLIP).
+    Context manager to suppress C-level logs from llama.cpp and CLIP.
+    
+    This redirects stdout/stderr FDs to /dev/null only for the duration of
+    the context (model initialization and inference), then restores them
+    to allow application logs to be shown.
+    
+    Usage:
+        with SuppressLlamaLogs(verbose=False):
+            # CLIP/llama.cpp logs suppressed here
+            model.initialize()
     """
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.fds_redirected = False
-        
-        if not self.verbose:
-            configure_logging(verbose=False)
-            self.fds_redirected = True
 
     def __enter__(self):
+        if not self.verbose:
+            # Flush Python's stdout/stderr before redirecting FDs
+            # This ensures buffered Python output goes to the real stdout/stderr
+            sys.stdout.flush()
+            sys.stderr.flush()
+            _redirect_fds_to_devnull()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Note: FDs remain redirected globally for the lifetime of the process
-        # This is intentional for thread safety
-        pass
+        if not self.verbose:
+            # Flush sys.stdout/stderr BEFORE restoring FDs
+            # This ensures any buffered output during the operation is suppressed
+            sys.stdout.flush()
+            sys.stderr.flush()
+            # Also flush libc's stdio buffers by calling fflush(NULL)
+            try:
+                import ctypes
+                libc = ctypes.CDLL(None)
+                libc.fflush(None)
+            except Exception:
+                pass
+            _restore_fds()
