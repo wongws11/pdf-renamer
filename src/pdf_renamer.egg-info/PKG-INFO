@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pdf-renamer
-Version: 1.1.0
+Version: 1.2.0
 Summary: AI-powered PDF document classification and automatic renaming using vision-language models
 Author-email: Wing Wong <wongwsme@gmail.com>
 License: MIT
@@ -104,6 +104,58 @@ pdf-renamer ./invoices/ -e -r
 ```
 
 *Note: On the first run, it will download the Qwen2.5-VL model (approx. 2GB).*
+
+## Command Line Arguments
+
+| Argument | Short | Type | Default | Description |
+|----------|-------|------|---------|-------------|
+| `input_path` | — | Path | — | **Required.** Input directory or PDF/JPG/PNG file path |
+| `--output` | `-o` | Path | Same as input | Output directory for renamed files |
+| `--execute` | `-e` | Flag | False | Actually rename files (default is dry-run mode) |
+| `--recursive` | `-r` | Flag | False | Recursively process files in subdirectories |
+| `--receipt` | — | Flag | False | Receipt mode: use `date_storename_description_id` format |
+| `--verbose` | `-v` | Flag | False | Enable verbose logging (shows model loading details) |
+| `--delay` | `-d` | Float | 0.5 | Delay between file processing in seconds |
+| `--workers` | `-w` | Integer | 4 | Number of worker threads for parallel processing |
+| `--save-log` | — | Path | — | Save processing results to JSON file |
+| `--no-cache` | — | Flag | False | Disable cache (re-analyze all PDFs, slower) |
+| `--cache-path` | — | Path | `pdf_cache.db` | Custom path to cache database |
+| `--cache-stats` | — | Flag | False | Show cache statistics and exit |
+| `--no-image` | — | Flag | False | Exclude JPG and PNG files from processing |
+
+### Examples
+
+```bash
+# Process all PDFs in a directory (dry-run)
+pdf-renamer ./documents/
+
+# Process and rename files
+pdf-renamer ./documents/ -e
+
+# Process recursively with custom output directory
+pdf-renamer ./documents/ -e -r -o ./renamed/
+
+# Process receipts with receipt-specific format
+pdf-renamer ./receipts/ -e --receipt
+
+# Verbose output with custom delay between files
+pdf-renamer ./documents/ -e -v --delay 1.0
+
+# Process with custom number of workers
+pdf-renamer ./documents/ -e -w 8
+
+# Save results to JSON and use custom cache location
+pdf-renamer ./documents/ -e --save-log results.json --cache-path /tmp/cache.db
+
+# Show cache statistics
+pdf-renamer --cache-stats
+
+# Force re-analysis (skip cache)
+pdf-renamer ./documents/ -e --no-cache
+
+# Exclude images from processing
+pdf-renamer ./mixed_files/ -e --no-image
+```
 
 ## Architecture & Code Structure
 
