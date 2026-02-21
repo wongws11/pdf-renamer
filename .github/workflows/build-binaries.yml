@@ -75,8 +75,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ "${{ matrix.arch }}" = "arm64" ]; then
-            # For arm64, try to use pre-built wheels; if not available, build with i8mm disabled
-            pip install --prefer-binary llama-cpp-python==0.3.16 || pip install llama-cpp-python==0.3.16 --no-binary llama-cpp-python --config-settings=cmake.define.GGML_NO_I8MM=ON
+            # For arm64, build llama-cpp-python from source with i8mm disabled to avoid compilation errors
+            CMAKE_BUILD_TYPE=Release pip install llama-cpp-python==0.3.16 --no-binary llama-cpp-python --config-settings=cmake.define.GGML_NO_I8MM=ON
+          else
+            # For x86_64, use default build with Metal GPU support
+            pip install llama-cpp-python==0.3.16
           fi
           pip install .
           pip install pyinstaller
