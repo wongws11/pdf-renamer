@@ -37,6 +37,21 @@ Download and extract the latest [poppler-windows](https://github.com/oschwartz10
 
 ## Installation
 
+We recommend installing `pdf-renamer` globally using [`pipx`](https://pipx.pypa.io/stable/). This ensures its dependencies (like `llama-cpp-python`) are cleanly isolated from your other Python projects.
+
+```bash
+pipx install git+https://github.com/wongws11/pdf-renamer.git
+```
+
+To upgrade to the latest version in the future:
+```bash
+pipx upgrade pdf-renamer
+```
+
+### Local Development / Manual Installation
+
+If you prefer a standard virtual environment or want to modify the code:
+
 ```bash
 # Clone the repository
 git clone https://github.com/wongws11/pdf-renamer.git
