@@ -7,7 +7,7 @@ Usage: python -m pdf_renamer [arguments]
 import sys
 from pathlib import Path
 
-# Ensure the package can be imported when run as a PyInstaller bundle
+# Ensure the package can be imported when run directly from the source directory
 if __name__ == "__main__":
     # Add src directory to path so pdf_renamer can be found
     current_dir = Path(__file__).parent.parent
