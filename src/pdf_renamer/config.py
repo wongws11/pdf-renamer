@@ -70,11 +70,15 @@ def create_parser() -> argparse.ArgumentParser:
         "--no-cache", action="store_true", help="Disable cache (re-analyze all PDFs)"
     )
 
+    default_cache_dir = Path.home() / ".pdf-renamer"
+    default_cache_dir.mkdir(parents=True, exist_ok=True)
+    default_cache_path = default_cache_dir / "cache.db"
+
     parser.add_argument(
         "--cache-path",
         type=Path,
-        default=Path("pdf_cache.db"),
-        help="Path to cache database (default: pdf_cache.db)",
+        default=default_cache_path,
+        help=f"Path to cache database (default: {default_cache_path})",
     )
 
     parser.add_argument(

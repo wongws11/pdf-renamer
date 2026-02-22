@@ -96,7 +96,7 @@ pdf-renamer ./invoices/ -e -r
 | `--workers` | `-w` | Integer | 4 | Number of worker threads for parallel processing |
 | `--save-log` | — | Path | — | Save processing results to JSON file |
 | `--no-cache` | — | Flag | False | Disable cache (re-analyze all PDFs, slower) |
-| `--cache-path` | — | Path | `pdf_cache.db` | Custom path to cache database |
+| `--cache-path` | — | Path | `~/.pdf-renamer/cache.db` | Custom path to cache database |
 | `--cache-stats` | — | Flag | False | Show cache statistics and exit |
 | `--no-image` | — | Flag | False | Exclude JPG and PNG files from processing |
 

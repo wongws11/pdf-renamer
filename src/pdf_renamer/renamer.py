@@ -49,7 +49,8 @@ class PDFRenamer:
 
         # Initialize cache with connection pooling (always keep cache for writing)
         self.use_cache = use_cache
-        self.cache = PDFCache(cache_path or Path("pdf_cache.db"))
+        default_cache_path = Path.home() / ".pdf-renamer" / "cache.db"
+        self.cache = PDFCache(cache_path or default_cache_path)
 
     def check_server(self) -> bool:
         """Verify model is loaded"""

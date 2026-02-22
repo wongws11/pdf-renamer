@@ -63,8 +63,13 @@ class ConnectionPool:
 class PDFCache:
     """SQLite cache for PDF analysis results with connection pooling"""
 
-    def __init__(self, db_path: Path = Path("pdf_cache.db"), pool_size: int = 5):
+    def __init__(
+        self,
+        db_path: Path = Path.home() / ".pdf-renamer" / "cache.db",
+        pool_size: int = 5,
+    ):
         self.db_path = db_path
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.pool = ConnectionPool(db_path, pool_size)
         self._init_db()
 
