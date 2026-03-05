@@ -298,11 +298,26 @@ class PDFConverter:
         except Exception as e:
             raise Exception(f"Failed to load {jpg_path.name}: {str(e)}")
 
+    # Maximum dimension to send to the vision model.
+    # Qwen2.5-VL has image_size=1024; larger images cause Metal GPU timeouts
+    # (kIOGPUCommandBufferCallbackErrorImpactingInteractivity) on macOS.
+    MODEL_MAX_DIM = 1024
+
     @staticmethod
     def image_to_base64(image: Image.Image) -> str:
-        """Convert PIL Image to base64 string with memory cleanup"""
+        """Convert PIL Image to base64 string with memory cleanup.
+
+        Downscales the image so its longest side is at most MODEL_MAX_DIM
+        before encoding, preventing Metal GPU timeouts on macOS when the
+        vision model processes very high-resolution pages.
+        """
         buffered = io.BytesIO()
         try:
+            # Downscale if necessary (thumbnail preserves aspect ratio in-place)
+            max_dim = PDFConverter.MODEL_MAX_DIM
+            if image.width > max_dim or image.height > max_dim:
+                image = image.copy()
+                image.thumbnail((max_dim, max_dim), Image.LANCZOS)
             image.save(buffered, format="PNG", optimize=True)
             return base64.b64encode(buffered.getvalue()).decode()
         finally:
