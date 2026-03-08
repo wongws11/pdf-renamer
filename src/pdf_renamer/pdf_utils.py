@@ -299,9 +299,13 @@ class PDFConverter:
             raise Exception(f"Failed to load {jpg_path.name}: {str(e)}")
 
     # Maximum dimension to send to the vision model.
-    # Qwen2.5-VL has image_size=1024; larger images cause Metal GPU timeouts
-    # (kIOGPUCommandBufferCallbackErrorImpactingInteractivity) on macOS.
-    MODEL_MAX_DIM = 1024
+    # Qwen2.5-VL has image_size=1024 and patch_size=14.
+    # At 1024px the model generates ~5,300 patches; on macOS this overruns
+    # the Metal GPU command-buffer timeout and raises
+    # kIOGPUCommandBufferCallbackErrorImpactingInteractivity (status 5).
+    # 560 = 14 * 40 → ~1,600 patches — well inside the timeout and still
+    # sufficient resolution for reading document text.
+    MODEL_MAX_DIM = 560
 
     @staticmethod
     def image_to_base64(image: Image.Image) -> str:
@@ -317,7 +321,7 @@ class PDFConverter:
             max_dim = PDFConverter.MODEL_MAX_DIM
             if image.width > max_dim or image.height > max_dim:
                 image = image.copy()
-                image.thumbnail((max_dim, max_dim), Image.LANCZOS)
+                image.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
             image.save(buffered, format="PNG", optimize=True)
             return base64.b64encode(buffered.getvalue()).decode()
         finally:
@@ -450,7 +454,9 @@ class FilenameGenerator:
 
         return filename
 
+
 from .log_silencer import SuppressLlamaLogs
+
 
 class LLMAnalyzer:
     """Utility class for LLM analysis via HuggingFace and llama.cpp"""
@@ -462,7 +468,7 @@ class LLMAnalyzer:
         self.repo_id = "unsloth/Qwen2.5-VL-3B-Instruct-GGUF"
         self.model_filename = "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf"
         self.mmproj_filename = "mmproj-F16.gguf"
-        
+
         # Download and load the model on initialization
         self._initialize_model()
 
@@ -472,18 +478,22 @@ class LLMAnalyzer:
             print("Loading vision model (may download on first run)...")
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
-                model_path = hf_hub_download(repo_id=self.repo_id, filename=self.model_filename)
-                mmproj_path = hf_hub_download(repo_id=self.repo_id, filename=self.mmproj_filename)
-                
+                model_path = hf_hub_download(
+                    repo_id=self.repo_id, filename=self.model_filename
+                )
+                mmproj_path = hf_hub_download(
+                    repo_id=self.repo_id, filename=self.mmproj_filename
+                )
+
                 chat_handler = Qwen25VLChatHandler(clip_model_path=mmproj_path)
-                
+
                 # Using -1 for Metal/GPU support automatically if available
                 self.llm = Llama(
                     model_path=model_path,
                     chat_handler=chat_handler,
                     n_ctx=4096,
                     n_gpu_layers=-1,
-                    verbose=self.verbose
+                    verbose=self.verbose,
                 )
         except Exception as e:
             raise Exception(f"Failed to initialize model: {str(e)}")
@@ -522,14 +532,10 @@ Date: [date]
 Description: [store/merchant name] [item description or NONE]
 ID: [document ID or NONE]
 
-Examples:
-Date: 2024-07-12
-Description: Walmart Grocery
-ID: 1234567890
-
-Date: 2023-05-15
-Description: Shell Gas Station Fuel Purchase
-ID: NONE
+Format examples (do NOT copy these values — extract only what you see in the document):
+Date: XXXX-XX-XX
+Description: StoreName ItemType
+ID: XXXXXXXXXX
 
 Only extract what you actually see in the receipt."""
         else:
@@ -551,14 +557,10 @@ Date: [date]
 Description: [short description]
 ID: [document ID or NONE]
 
-Examples:
-Date: 2024-07-12
-Description: Kwik Fit Invoice
-ID: 147218533
-
-Date: 2023-05-15
-Description: Insurance Policy
-ID: POL-2023-5678
+Format examples (do NOT copy these values — extract only what you see in the document):
+Date: XXXX-XX-XX
+Description: Company Name DocumentType
+ID: XXXXXXXXXX
 
 Only extract what you actually see in the document."""
 
@@ -571,14 +573,23 @@ Only extract what you actually see in the document."""
                         {
                             "role": "user",
                             "content": [
-                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
-                                {"type": "text", "text": prompt}
-                            ]
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/png;base64,{image_base64}"
+                                    },
+                                },
+                                {"type": "text", "text": prompt},
+                            ],
                         }
-                    ]
+                    ],
                 )
 
-            if isinstance(response, dict) and "choices" in response and len(response["choices"]) > 0:
+            if (
+                isinstance(response, dict)
+                and "choices" in response
+                and len(response["choices"]) > 0
+            ):
                 content = response["choices"][0]["message"].get("content", "")
                 if content is None:
                     return ""
