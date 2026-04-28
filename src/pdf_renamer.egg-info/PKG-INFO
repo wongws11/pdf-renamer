@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pdf-renamer
-Version: 1.3.2
+Version: 1.4.0
 Summary: AI-powered PDF document classification and automatic renaming using vision-language models
 Author-email: Wing Wong <wongwsme@gmail.com>
 License: MIT
