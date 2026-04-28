@@ -3,6 +3,7 @@ Main entry point and orchestration
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -112,8 +113,11 @@ def main():
     if args.save_log:
         save_results(results, args.save_log)
 
-    # Exit with appropriate code
-    sys.exit(0 if renamer.stats.failed == 0 else 1)
+    # Use os._exit() to skip Python/atexit finalization and avoid
+    # llama.cpp Metal device cleanup crash (GGML_ASSERT in ggml_metal_device_free)
+    exit_code = 0 if renamer.stats.failed == 0 else 1
+    renamer.close()
+    os._exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -470,8 +470,25 @@ class LLMAnalyzer:
 
     def _initialize_model(self):
         """Download (if needed) and initialize the model"""
-        if self.verbose:
-            print("Loading vision model (may download on first run)...")
+        from huggingface_hub import try_to_load_from_cache
+
+        # Check if model files are already cached
+        model_cached = try_to_load_from_cache(
+            self.repo_id, self.model_filename
+        )
+        mmproj_cached = try_to_load_from_cache(
+            self.repo_id, self.mmproj_filename
+        )
+        needs_download = model_cached is None or mmproj_cached is None
+
+        if needs_download:
+            print(
+                "First run: downloading vision model (~3 GB). "
+                "This may take a few minutes..."
+            )
+        else:
+            print("Loading vision model...")
+
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
                 model_path = hf_hub_download(
@@ -597,7 +614,7 @@ Only extract what you actually see in the document."""
             raise Exception(f"Model request failed: {str(e)}")
 
     def close(self):
-        """Cleanup resources"""
-        if self.llm:
-            # Let garbage collection handle it or any explicit close if needed
+        """Explicitly free model resources to avoid Metal cleanup crash on exit"""
+        if self.llm is not None:
+            self.llm.close()
             self.llm = None

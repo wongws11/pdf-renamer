@@ -335,8 +335,13 @@ class PDFRenamer:
 
         return results
 
-    def __del__(self):
-        """Cleanup resources"""
+    def close(self):
+        """Explicitly free resources before exit"""
         if self.cache:
             self.cache.close()
+            self.cache = None
         self.llm_analyzer.close()
+
+    def __del__(self):
+        """Cleanup resources"""
+        self.close()
