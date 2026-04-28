@@ -15,7 +15,7 @@ from pdf2image import convert_from_path
 from PIL import Image
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
-from llama_cpp.llama_chat_format import Qwen25VLChatHandler
+from llama_cpp.llama_chat_format import Llava16ChatHandler
 
 
 # Thread-safe connection pool for database
@@ -299,12 +299,8 @@ class PDFConverter:
             raise Exception(f"Failed to load {jpg_path.name}: {str(e)}")
 
     # Maximum dimension to send to the vision model.
-    # Qwen2.5-VL has image_size=1024 and patch_size=14.
-    # At 1024px the model generates ~5,300 patches; on macOS this overruns
-    # the Metal GPU command-buffer timeout and raises
-    # kIOGPUCommandBufferCallbackErrorImpactingInteractivity (status 5).
-    # 560 = 14 * 40 → ~1,600 patches — well inside the timeout and still
-    # sufficient resolution for reading document text.
+    # Keep resolution moderate to avoid GPU memory/timeout issues on macOS Metal.
+    # 560px is sufficient for reading document text.
     MODEL_MAX_DIM = 560
 
     @staticmethod
@@ -465,8 +461,8 @@ class LLMAnalyzer:
         # server_url is kept for API compatibility but not used
         self.llm = None
         self.verbose = verbose
-        self.repo_id = "unsloth/Qwen2.5-VL-3B-Instruct-GGUF"
-        self.model_filename = "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf"
+        self.repo_id = "unsloth/gemma-4-E2B-it-GGUF"
+        self.model_filename = "gemma-4-E2B-it-Q4_K_M.gguf"
         self.mmproj_filename = "mmproj-F16.gguf"
 
         # Download and load the model on initialization
@@ -485,7 +481,7 @@ class LLMAnalyzer:
                     repo_id=self.repo_id, filename=self.mmproj_filename
                 )
 
-                chat_handler = Qwen25VLChatHandler(clip_model_path=mmproj_path)
+                chat_handler = Llava16ChatHandler(clip_model_path=mmproj_path)
 
                 # Using -1 for Metal/GPU support automatically if available
                 self.llm = Llama(

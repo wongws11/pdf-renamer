@@ -1,7 +1,7 @@
 Pillow>=10.0.0
 pdf2image>=1.16.3
-huggingface-hub>=0.23.0
-llama-cpp-python>=0.3.16
+huggingface-hub>=1.12.0
+llama-cpp-python>=0.3.21
 
 [test]
 pytest>=7.0.0
