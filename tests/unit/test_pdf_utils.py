@@ -56,6 +56,32 @@ def test_response_parser_missing_fields():
     assert desc == "my_file"
     assert doc_id is None
 
+
+def test_response_parser_strips_thinking_block():
+    parser = ResponseParser()
+    response = (
+        "Let me look at the page.\n"
+        "The invoice number is INV-77.\n"
+        "\n"
+        "Date: 2024-10-15\n"
+        "Description: Auto Insurance\n"
+        "ID: POL-999"
+    )
+    date, desc, doc_id = parser.parse_response(response, "original.pdf")
+    assert date == "2024-10-15"
+    assert desc == "Auto Insurance"
+    assert doc_id == "POL-999"
+
+
+def test_response_parser_strips_bare_thinking_token():
+    parser = ResponseParser()
+    # No closing tag: take everything after the opening token.
+    response = "Reasoning about the doc.\nDate: 2024-10-15\nDescription: Auto Insurance\nID: POL-999"
+    date, desc, doc_id = parser.parse_response(response, "original.pdf")
+    assert date == "2024-10-15"
+    assert desc == "Auto Insurance"
+    assert doc_id == "POL-999"
+
 def test_file_utils_checksum(tmp_path):
     # Create a temporary file
     test_file = tmp_path / "test.txt"

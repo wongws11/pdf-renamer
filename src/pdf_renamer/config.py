@@ -93,6 +93,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Exclude JPG and PNG files from processing",
     )
 
+    parser.add_argument(
+        "--model-size",
+        choices=["auto", "27b", "9b", "4b"],
+        default="auto",
+        help=(
+            "Built-in vision model size (default: auto). "
+            "auto uses Qwen3.5-27B on hosts with >=30 GB RAM, "
+            "Qwen3.5-9B on >=16 GB, otherwise Qwen3.5-4B. "
+            "Pass 27b, 9b, or 4b to force a particular size."
+        ),
+    )
+
     return parser
 
 

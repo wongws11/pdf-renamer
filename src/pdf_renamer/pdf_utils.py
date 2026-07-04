@@ -5,6 +5,7 @@ Utility classes and functions for PDF processing
 import base64
 import hashlib
 import io
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -15,7 +16,8 @@ from pdf2image import convert_from_path
 from PIL import Image
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
-from llama_cpp.llama_chat_format import Llava16ChatHandler
+
+from .log_silencer import SuppressLlamaLogs
 
 
 # Thread-safe connection pool for database
@@ -355,6 +357,23 @@ class ResponseParser:
         # Use filename (without extension) as fallback description
         fallback_description = Path(filename).stem if filename else "Document"
 
+        # Qwen3.5 emits thinking content by default, wrapped in
+        #   <think> ... </think>
+        # blocks before the final answer. Strip any such block so the
+        # Date/Description/ID regexes only match the final answer. Also
+        # handles a stray leading <think> with no closing tag (take
+        # everything after it).
+        if llm_response:
+            think_open = chr(60) + "think" + chr(62)
+            think_close = chr(60) + "/think" + chr(62)
+            pattern = re.compile(
+                think_open + r".*?" + think_close, flags=re.DOTALL
+            )
+            llm_response = pattern.sub("", llm_response)
+            if think_close not in llm_response and think_open in llm_response:
+                llm_response = llm_response.split(think_open, 1)[-1]
+            llm_response = llm_response.strip()
+
         date = None
         description = fallback_description
         doc_id = None
@@ -451,19 +470,113 @@ class FilenameGenerator:
         return filename
 
 
-from .log_silencer import SuppressLlamaLogs
+# Built-in vision model configurations.
+# Qwen3.5 is a vision-language model; each repo ships a main GGUF plus a
+# separate mmproj projector (mmproj-F16.gguf) that the chat handler loads.
+# UD-Q4_K_XL is Unsloth's recommended dynamic Q4 quant (best accuracy/size).
+MODEL_CONFIGS = {
+    "27b": {
+        "repo_id": "unsloth/Qwen3.5-27B-GGUF",
+        "model_filename": "Qwen3.5-27B-UD-Q4_K_XL.gguf",
+        "mmproj_filename": "mmproj-F16.gguf",
+        "download_hint": "~18 GB",
+    },
+    "9b": {
+        "repo_id": "unsloth/Qwen3.5-9B-GGUF",
+        "model_filename": "Qwen3.5-9B-UD-Q4_K_XL.gguf",
+        "mmproj_filename": "mmproj-F16.gguf",
+        "download_hint": "~7 GB",
+    },
+    "4b": {
+        "repo_id": "unsloth/Qwen3.5-4B-GGUF",
+        "model_filename": "Qwen3.5-4B-UD-Q4_K_XL.gguf",
+        "mmproj_filename": "mmproj-F16.gguf",
+        "download_hint": "~4 GB",
+    },
+}
+
+# Hosts with at least this much (unified on macOS) memory use the 27B model.
+# Below this they step down to 9B, then 4B. Thresholds leave headroom for the
+# OS/app and for KV cache + vision-encoder overhead at n_ctx=4096.
+RAM_THRESHOLD_27B_BYTES = 30 * (1024 ** 3)
+RAM_THRESHOLD_9B_BYTES = 16 * (1024 ** 3)
+
+# Back-compat alias for the previous single-threshold name (used by tests).
+RAM_THRESHOLD_BYTES = RAM_THRESHOLD_9B_BYTES
+
+
+def _get_total_ram_bytes() -> int:
+    """Best-effort total physical memory in bytes.
+
+    On macOS this is the unified memory pool shared by CPU and Metal GPU,
+    which is what actually constrains llama.cpp model loading with
+    n_gpu_layers=-1. On Linux this reads /proc/meminfo. Other platforms
+    fall back to sysconf; if everything fails we return 0 (treated as
+    "unknown" by the selector).
+    """
+    import platform
+    import subprocess
+
+    system = platform.system()
+    try:
+        if system == "Darwin":
+            out = subprocess.run(
+                ["sysctl", "-n", "hw.memsize"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if out.returncode == 0:
+                return int(out.stdout.strip())
+        elif system == "Linux":
+            try:
+                with open("/proc/meminfo", "r") as f:
+                    for line in f:
+                        if line.startswith("MemTotal:"):
+                            # "MemTotal:       16384000 kB"
+                            return int(line.split()[1]) * 1024
+            except OSError:
+                pass
+        # Generic fallback via sysconf
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    except Exception:
+        return 0
+
+
+def _select_model_size(override: str = "auto") -> str:
+    """Pick which built-in model size to use.
+
+    override: "auto" (default) picks the largest model that fits the host's
+    memory: 27b if RAM >= 30 GiB, 9b if >= 16 GiB, else 4b. "27b"/"9b"/"4b"
+    force a particular size.
+    """
+    if override not in ("auto", "27b", "9b", "4b"):
+        override = "auto"
+    if override != "auto":
+        return override
+    ram = _get_total_ram_bytes()
+    if ram == 0:
+        # Unknown host: be conservative.
+        return "4b"
+    if ram >= RAM_THRESHOLD_27B_BYTES:
+        return "27b"
+    if ram >= RAM_THRESHOLD_9B_BYTES:
+        return "9b"
+    return "4b"
 
 
 class LLMAnalyzer:
     """Utility class for LLM analysis via HuggingFace and llama.cpp"""
 
-    def __init__(self, server_url: str = "", verbose: bool = False):
+    def __init__(self, server_url: str = "", verbose: bool = False, model_size: str = "auto"):
         # server_url is kept for API compatibility but not used
         self.llm = None
         self.verbose = verbose
-        self.repo_id = "unsloth/gemma-4-E2B-it-GGUF"
-        self.model_filename = "gemma-4-E2B-it-Q4_K_M.gguf"
-        self.mmproj_filename = "mmproj-F16.gguf"
+        self.model_size = _select_model_size(model_size)
+        config = MODEL_CONFIGS[self.model_size]
+        self.repo_id = config["repo_id"]
+        self.model_filename = config["model_filename"]
+        self.mmproj_filename = config["mmproj_filename"]
 
         # Download and load the model on initialization
         self._initialize_model()
@@ -483,11 +596,11 @@ class LLMAnalyzer:
 
         if needs_download:
             print(
-                "First run: downloading vision model (~3 GB). "
+                f"First run: downloading vision model ({MODEL_CONFIGS[self.model_size]['download_hint']}). "
                 "This may take a few minutes..."
             )
         else:
-            print("Loading vision model...")
+            print(f"Loading vision model (Qwen3.5-{self.model_size.upper()})...")
 
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
@@ -498,7 +611,7 @@ class LLMAnalyzer:
                     repo_id=self.repo_id, filename=self.mmproj_filename
                 )
 
-                chat_handler = Llava16ChatHandler(clip_model_path=mmproj_path)
+                chat_handler = self._build_chat_handler(mmproj_path)
 
                 # Using -1 for Metal/GPU support automatically if available
                 self.llm = Llama(
@@ -510,6 +623,37 @@ class LLMAnalyzer:
                 )
         except Exception as e:
             raise Exception(f"Failed to initialize model: {str(e)}")
+
+    @staticmethod
+    def _build_chat_handler(mmproj_path: str):
+        """Construct the multimodal chat handler for the Qwen3.5 vision model.
+
+        Tries MTMDChatHandler first (the generic handler for GGUF models with
+        an mtmd projector and embedded chat template, which the Qwen3.5 GGUF
+        repos ship a mmproj-F16.gguf for). Falls back to Qwen25VLChatHandler
+        if MTMD is unavailable or rejects the model, then to Llava16ChatHandler
+        as a last resort. Each handler class is imported lazily so the
+        function still works on bindings that only ship a subset of them.
+        """
+        last_error = None
+        for name in ("MTMDChatHandler", "Qwen25VLChatHandler", "Llava16ChatHandler"):
+            try:
+                module = __import__(
+                    "llama_cpp.llama_chat_format", fromlist=[name]
+                )
+            except ImportError:
+                continue
+            handler_cls = getattr(module, name, None)
+            if handler_cls is None:
+                continue
+            try:
+                return handler_cls(clip_model_path=mmproj_path)
+            except Exception as e:
+                last_error = e
+                continue
+        raise Exception(
+            f"No compatible chat handler available for Qwen3.5: {last_error}"
+        )
 
     def check_server(self) -> bool:
         """Verify model is loaded"""
@@ -540,6 +684,8 @@ Consider original filename might contain hints.
 If you consider original filename useful, 
 you may use it to infer missing details after careful consideration only if the receipt is unclear.
 
+Respond directly with the answer only. Do NOT include any thinking, reasoning, or analysis steps.
+
 Format your response EXACTLY as:
 Date: [date]
 Description: [store/merchant name] [item description or NONE]
@@ -565,6 +711,8 @@ Consider original filename might contain hints.
 If you consider original filename useful, 
 you may use it to infer missing details after careful consideration only if the document content is unclear.
 
+Respond directly with the answer only. Do NOT include any thinking, reasoning, or analysis steps.
+
 Format your response EXACTLY as:
 Date: [date]
 Description: [short description]
@@ -577,26 +725,54 @@ ID: XXXXXXXXXX
 
 Only extract what you actually see in the document."""
 
+        # Qwen3.5 emits thinking content by default (27B and larger).
+        # The Small series (4B/9B) disable thinking by default, but passing
+        # enable_thinking=False uniformly is safe and idempotent.
+        #
+        # create_chat_completion() has a fixed signature with no **kwargs, so
+        # we cannot reach the Jinja2 chat template through it. Instead we call
+        # the chat handler directly: its __call__ accepts **kwargs which flow
+        # to template.render(**kwargs), exactly what the llama-server
+        # --chat-template-kwargs '{"enable_thinking":false}' flag does.
+        # This is the only reliable way to disable thinking via the Python
+        # binding. Falls back to create_chat_completion if the handler is
+        # unavailable (e.g. a non-multimodal handler).
+        completion_kwargs = dict(
+            max_tokens=256,
+            temperature=0.7,
+            top_p=0.8,
+            top_k=20,
+            min_p=0.0,
+            presence_penalty=1.5,
+            repeat_penalty=1.0,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{image_base64}"
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ],
+        )
+        # Qwen3.5 non-thinking sampling params per Unsloth docs.
+
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
-                response = self.llm.create_chat_completion(
-                    max_tokens=256,
-                    temperature=0.1,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/png;base64,{image_base64}"
-                                    },
-                                },
-                                {"type": "text", "text": prompt},
-                            ],
-                        }
-                    ],
-                )
+                handler = getattr(self.llm, "chat_handler", None)
+                if handler is not None:
+                    response = handler(
+                        llama=self.llm,
+                        enable_thinking=False,
+                        **completion_kwargs,
+                    )
+                else:
+                    response = self.llm.create_chat_completion(**completion_kwargs)
 
             if (
                 isinstance(response, dict)

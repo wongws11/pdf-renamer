@@ -1,7 +1,6 @@
 import ctypes
 import os
 import sys
-from typing import Optional, Callable
 
 # Global variable to hold the callback so it's not garbage collected
 _llama_log_callback = None
@@ -34,7 +33,7 @@ def _redirect_fds_to_devnull():
         os.dup2(_devnull_fd, 2)  # stderr -> /dev/null
         
         _fd_redirected = True
-    except Exception as e:
+    except Exception:
         # If FD redirection fails, we'll try the callback approach instead
         pass
 

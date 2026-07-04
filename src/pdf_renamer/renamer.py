@@ -28,6 +28,7 @@ class PDFRenamer:
         cache_path: Optional[Path] = None,
         max_workers: int = 4,
         receipt: bool = False,
+        model_size: str = "auto",
     ):
         self.verbose = verbose
         self.max_workers = max_workers
@@ -40,7 +41,7 @@ class PDFRenamer:
         self.stats = ProcessingStats()
 
         # Initialize utilities
-        self.llm_analyzer = LLMAnalyzer(verbose=verbose)
+        self.llm_analyzer = LLMAnalyzer(verbose=verbose, model_size=model_size)
         self.pdf_converter = PDFConverter()
         self.file_utils = FileUtils()
         self.response_parser = ResponseParser()

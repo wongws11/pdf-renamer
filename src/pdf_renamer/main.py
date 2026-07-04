@@ -98,6 +98,7 @@ def main():
         cache_path=args.cache_path,
         max_workers=args.workers,
         receipt=args.receipt,
+        model_size=args.model_size,
     )
 
     # Check model is loaded
@@ -114,9 +115,16 @@ def main():
         save_results(results, args.save_log)
 
     # Use os._exit() to skip Python/atexit finalization and avoid
-    # llama.cpp Metal device cleanup crash (GGML_ASSERT in ggml_metal_device_free)
+    # llama.cpp Metal device cleanup crash (GGML_ASSERT in ggml_metal_device_free).
+    # Under pytest we raise SystemExit instead so the test runner can keep
+    # going (model cleanup crash is not exercised in tests since the model
+    # is mocked). Detecting pytest via module presence is more robust than
+    # relying on the PYTEST_CURRENT_TEST env var, which is only set during
+    # the actual test call.
     exit_code = 0 if renamer.stats.failed == 0 else 1
     renamer.close()
+    if "pytest" in sys.modules:
+        raise SystemExit(exit_code)
     os._exit(exit_code)
 
 

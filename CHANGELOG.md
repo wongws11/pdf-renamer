@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-04
+
+### Changed
+- Upgraded `llama-cpp-python` to `>=0.3.32` and `huggingface-hub` to `>=1.22.0`.
+- Switched the built-in vision model from `unsloth/gemma-4-E2B-it-GGUF` to
+  `unsloth/Qwen3.5-9B-GGUF` (`UD-Q4_K_XL`), loaded via a multimodal chat
+  handler with the `mmproj-F16.gguf` projector. The handler is selected
+  automatically, preferring `MTMDChatHandler` and falling back to
+  `Qwen25VLChatHandler` / `Llava16ChatHandler` for older llama-cpp-python
+  builds that don't ship (or reject the model under) MTMD.
+- On hosts with less than 16 GB of (unified on macOS) memory, the renamer now
+  automatically falls back to `unsloth/Qwen3.5-4B-GGUF` (`UD-Q4_K_XL`) to avoid
+  swapping/OOM. Hosts with >=30 GB use `unsloth/Qwen3.5-27B-GGUF` (`UD-Q4_K_XL`),
+  and hosts with >=16 GB use the 9B model. Detection uses
+  `sysctl hw.memsize` (macOS) or `/proc/meminfo` (Linux); unknown hosts get
+  the 4B model.
+
+### Added
+- `--model-size {auto,27b,9b,4b}` CLI flag to override the automatic
+  model-size selection (default `auto`).
+- `ResponseParser.parse_response` now strips Qwen3.5 `...` thinking
+  blocks so Date/Description/ID parsing is robust even when the model emits
+  reasoning content. Inference disables thinking by calling the multimodal
+  chat handler directly with `enable_thinking=False`, which flows through
+  to the Jinja2 chat template render (the same mechanism as llama-server's
+  `--chat-template-kwargs '{"enable_thinking":false}'` flag). Sampling
+  parameters updated to Qwen3.5 non-thinking defaults per Unsloth docs
+  (`temperature=0.7, top_p=0.8, top_k=20, min_p=0.0,
+  presence_penalty=1.5, repeat_penalty=1.0`).
+- Unit tests for model-size selection, chat-handler fallback, and
+  thinking-block stripping.
+
 ## [1.3.1] - 2026-03-05
 
 ### Fixed
@@ -112,6 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.6.0]: https://github.com/wongws11/pdf-renamer/compare/v1.5.0...v1.6.0
 [1.3.1]: https://github.com/wongws11/pdf-renamer/compare/v1.3.0...v1.3.1
 [1.2.0]: https://github.com/wongws11/pdf-renamer/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/wongws11/pdf-renamer/compare/v1.0.1...v1.1.0
