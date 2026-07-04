@@ -16,6 +16,7 @@ from pdf2image import convert_from_path
 from PIL import Image
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
+from llama_cpp.llama_types import ChatCompletionRequestMessage
 
 from .log_silencer import SuppressLlamaLogs
 
@@ -737,30 +738,20 @@ Only extract what you actually see in the document."""
         # This is the only reliable way to disable thinking via the Python
         # binding. Falls back to create_chat_completion if the handler is
         # unavailable (e.g. a non-multimodal handler).
-        completion_kwargs = dict(
-            max_tokens=256,
-            temperature=0.7,
-            top_p=0.8,
-            top_k=20,
-            min_p=0.0,
-            presence_penalty=1.5,
-            repeat_penalty=1.0,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{image_base64}"
-                            },
+        messages: List[ChatCompletionRequestMessage] = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_base64}"
                         },
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ],
-        )
-        # Qwen3.5 non-thinking sampling params per Unsloth docs.
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
 
         try:
             with SuppressLlamaLogs(verbose=self.verbose):
@@ -769,10 +760,26 @@ Only extract what you actually see in the document."""
                     response = handler(
                         llama=self.llm,
                         enable_thinking=False,
-                        **completion_kwargs,
+                        max_tokens=256,
+                        temperature=0.7,
+                        top_p=0.8,
+                        top_k=20,
+                        min_p=0.0,
+                        presence_penalty=1.5,
+                        repeat_penalty=1.0,
+                        messages=messages,
                     )
                 else:
-                    response = self.llm.create_chat_completion(**completion_kwargs)
+                    response = self.llm.create_chat_completion(
+                        max_tokens=256,
+                        temperature=0.7,
+                        top_p=0.8,
+                        top_k=20,
+                        min_p=0.0,
+                        presence_penalty=1.5,
+                        repeat_penalty=1.0,
+                        messages=messages,
+                    )
 
             if (
                 isinstance(response, dict)
