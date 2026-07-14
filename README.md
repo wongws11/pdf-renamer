@@ -1,6 +1,6 @@
 # PDF Renamer 📄✨
 
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Automatically rename PDFs and images using a vision-language model (Qwen3.5) running locally. Perfect for organizing document collections without cloud dependencies.
@@ -17,7 +17,7 @@ Automatically rename PDFs and images using a vision-language model (Qwen3.5) run
 
 ## Prerequisites
 
-- **Python 3.13+**
+- **Python 3.12+**
 - **Poppler**: Required for converting PDF pages to images.
 
 ### Installing Poppler
@@ -37,32 +37,31 @@ Download and extract the latest [poppler-windows](https://github.com/oschwartz10
 
 ## Installation
 
-We recommend installing `pdf-renamer` globally using [`pipx`](https://pipx.pypa.io/stable/). This ensures its dependencies (like `llama-cpp-python`) are cleanly isolated from your other Python projects.
+We recommend installing `pdf-renamer` globally from your local checkout using [`uv`](https://docs.astral.sh/uv/getting-started/installation/). This keeps dependencies such as `llama-cpp-python` isolated from your other Python projects while making the `pdf-renamer` command available on your PATH.
 
 ```bash
-pipx install git+https://github.com/wongws11/pdf-renamer.git
+uv tool install --python 3.12 --editable .
 ```
 
-To upgrade to the latest version in the future:
+The editable installation reflects source-code changes immediately. Reinstall it after changing project dependencies or packaging metadata:
 ```bash
-pipx upgrade pdf-renamer
+uv tool install --python 3.12 --editable --force .
 ```
 
 ### Local Development / Manual Installation
 
-If you prefer a standard virtual environment or want to modify the code:
+To modify the code, use `uv` to create and synchronize the project environment:
 
 ```bash
 # Clone the repository
 git clone https://github.com/wongws11/pdf-renamer.git
 cd pdf-renamer
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Create the environment and install the application and development dependencies
+uv sync
 
-# Install the application
-pip install -e .
+# Run the test suite
+uv run pytest
 ```
 
 ## Quick Start

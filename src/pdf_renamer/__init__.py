@@ -15,7 +15,7 @@ from .pdf_utils import (
 )
 from .cli import PDFRenamer, ProcessingStats
 
-__version__ = "1.6.0"
+__version__ = "1.6.2"
 __author__ = "Wing Wong"
 
 __all__ = [
